@@ -5,7 +5,7 @@ import { FirstPersonControls } from '../utils/controls';
     camera: THREE.PerspectiveCamera;
     scene: THREE.Scene;
     renderer: THREE.WebGLRenderer;
-    world: THREE.Group; // Группа для статичных объектов мира
+    world: THREE.Group; 
     setControls: (controls: FirstPersonControls) => void;
   }
   
@@ -17,6 +17,7 @@ export interface LoopParams {
     socket: WebSocket;
     world: THREE.Group;
     raycaster: THREE.Raycaster;
+    shotSound: HTMLAudioElement;
   }
 
 export interface RenderStepParams {
@@ -26,4 +27,6 @@ export interface RenderStepParams {
     controls: FirstPersonControls;
     worldGroup: THREE.Group;
     raycaster: THREE.Raycaster;
+    shotSound: HTMLAudioElement;
+    socket: WebSocket;
 }

@@ -1,5 +1,3 @@
-// src/utils/controls.ts
-
 import * as THREE from 'three';
 
 export class FirstPersonControls {
@@ -64,7 +62,7 @@ export class FirstPersonControls {
     if (direction.lengthSq() > 0) {
       direction.normalize();
   
-      // Поворачиваем вектор направления по yaw (вокруг оси Y)
+    
       const yaw = this.yawObject.rotation.y;
       const matrix = new THREE.Matrix4().makeRotationY(yaw);
       direction.applyMatrix4(matrix);

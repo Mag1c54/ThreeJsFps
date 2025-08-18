@@ -40,7 +40,11 @@ function updateOtherPlayers(playersData: any[], scene: THREE.Scene) {
 }
 
 
-function attemptConnection(scene: THREE.Scene, onConnect: (myId: string, socket: WebSocket) => void) {
+function attemptConnection(
+    scene: THREE.Scene, 
+    shotSound: HTMLAudioElement,
+    onConnect: (myId: string, socket: WebSocket) => void) {
+
     const ws = new WebSocket('ws://127.0.0.1:8085');
 
     ws.onopen = () => {
@@ -62,6 +66,13 @@ function attemptConnection(scene: THREE.Scene, onConnect: (myId: string, socket:
                     (window as any).updateMyPlayer(message.payload);
                 }
             }
+            if (message.type === 'player_shot') {
+
+                if (message.shooterId !== myPlayerId) {
+                    shotSound.currentTime = 0;
+                    shotSound.play();
+                }
+            }
         } catch (e) {
             console.error("Ошибка парсинга сообщения от сервера:", e);
         }
@@ -75,7 +86,7 @@ function attemptConnection(scene: THREE.Scene, onConnect: (myId: string, socket:
         if (!myPlayerId) {
             console.log('Не удалось подключиться. Повторная попытка через 2 секунды...');
             setTimeout(() => {
-                attemptConnection(scene, onConnect);
+                attemptConnection(scene, shotSound, onConnect);
             }, 2000);
         } else {
             console.log('Отключено от сервера.');
@@ -83,14 +94,14 @@ function attemptConnection(scene: THREE.Scene, onConnect: (myId: string, socket:
             playerMeshes.forEach(mesh => scene.remove(mesh));
             playerMeshes.clear();
             setTimeout(() => {
-                attemptConnection(scene, onConnect);
+                attemptConnection(scene, shotSound, onConnect);
             }, 2000);
         }
     };
 }
 
 
-export function connectToServer(scene: THREE.Scene, onConnect: (myId: string, socket: WebSocket) => void) {
+export function connectToServer(scene: THREE.Scene,shotSound: HTMLAudioElement, onConnect: (myId: string, socket: WebSocket) => void) {
     console.log("Первая попытка подключения к серверу...");
-    attemptConnection(scene, onConnect);
+    attemptConnection(scene, shotSound,onConnect);
 }

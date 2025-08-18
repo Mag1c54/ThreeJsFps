@@ -12,6 +12,10 @@ export const renderer = new THREE.WebGLRenderer({ antialias: true });
 export const raycaster = new THREE.Raycaster();
 export const worldGroup = new THREE.Group();
 
+const shotSound = new Audio('/sounds/Thompson.mp3');
+shotSound.load()
+
+
 
 initScene({
   camera,
@@ -24,10 +28,11 @@ initScene({
     setupPointerLock(controls);
 
     console.log('Подключаемся к серверу...');
-    connectToServer(scene, (myId, socket) => {
+    connectToServer(scene, shotSound, (myId, socket) => {
       console.log("Успешно подключено к серверу. Мой ID:", myId);
       startRenderLoop({
         scene, camera, renderer, controls, socket, world: worldGroup, raycaster
+        , shotSound
       });
     });
   },
