@@ -1,7 +1,9 @@
 import { WebSocketServer, WebSocket } from "ws";
-import RAPIER from "@dimforge/rapier3d-compat";
+import * as RAPIER from "@dimforge/rapier3d-compat";
+import { normalizeVector3 } from "./utils/vector";
 import type { Player } from "./serverTypes/player";
 import { createSeededRandom } from "./utils/seed";
+import { updatePlayerMovement } from "./dependencies/server/playerMovement";
 
 async function main() {
   await RAPIER.init();
@@ -10,7 +12,7 @@ async function main() {
   const gravity = new RAPIER.Vector3(0, -9.81 * 2, 0);
   const world = new RAPIER.World(gravity);
 
-  // Создаем статическую геометрию мира
+
   const floorSize = 4000;
   const floorBodyDesc = RAPIER.RigidBodyDesc.fixed();
   world.createCollider(
@@ -63,6 +65,9 @@ async function main() {
       id: playerId,
       socket: ws,
       rigidBody: playerRigidBody,
+      hp: 100,
+      inventory: ["thompson", "knife"],
+      currentWeapon: "thompson",
       input: {
         forward: false,
         backward: false,
@@ -78,37 +83,101 @@ async function main() {
     players.set(playerId, player);
 
     ws.on("message", (message) => {
-        try {
-          const data = JSON.parse(message.toString());
-          const player = players.get(playerId); 
-          if (!player) return;
-  
-    
-          if (data.type === 'shoot') {
-       
+      try {
+        const data = JSON.parse(message.toString());
+        const player = players.get(playerId);
+        if (!player) return;
 
-            const shootEvent = JSON.stringify({
-              type: 'player_shot',
-              shooterId: playerId
-            });
-  
-    
-            wss.clients.forEach(client => {
-              if (client.readyState === WebSocket.OPEN) {
-                client.send(shootEvent);
-              }
-            });
-  
-          } else {
-           
-            player.input = { ...player.input, ...data };
+        if (data.type === "shoot") {
+          const shooter = players.get(playerId);
+          if (!shooter) return;
+
+          if (shooter.currentWeapon !== "thompson") {
+            return 
           }
-     
-  
-        } catch (e) {
-         
+
+          const yaw = data.yaw;
+          const pitch = data.pitch;
+          const direction = new RAPIER.Vector3(
+            -Math.sin(yaw) * Math.cos(pitch),
+            -Math.sin(pitch),
+            -Math.cos(yaw) * Math.cos(pitch)
+          );
+
+          const normalizedDirection = normalizeVector3(direction);
+
+          const shooterPos = shooter.rigidBody.translation();
+          const rayOrigin = new RAPIER.Vector3(
+            shooterPos.x,
+            shooterPos.y + 12.0,
+            shooterPos.z
+          );
+
+          const ray = new RAPIER.Ray(rayOrigin, normalizedDirection);
+          const maxDistance = 2000;
+
+          const hit = world.castRay(
+            ray,
+            maxDistance,
+            true,
+            undefined,
+            undefined,
+            shooter.rigidBody.collider(0)
+          );
+
+          if (hit) {
+            const hitBody = hit.collider.parent();
+            if (hitBody) {
+              for (const [targetId, targetPlayer] of players.entries()) {
+                if (
+                  targetId !== playerId &&
+                  targetPlayer.rigidBody.handle === hitBody.handle
+                ) {
+                  targetPlayer.hp -= 25;
+                  console.log(
+                    `Игрок ${playerId} попал в ${targetId}. У ${targetId} осталось ${targetPlayer.hp} HP.`
+                  );
+
+                  if (targetPlayer.hp <= 0) {
+                    console.log(`Игрок ${targetId} убит.`);
+                    targetPlayer.hp = 100;
+                    targetPlayer.rigidBody.setTranslation(
+                      { x: 0, y: 30, z: 0 },
+                      true
+                    );
+                    targetPlayer.rigidBody.setLinvel(
+                      { x: 0, y: 0, z: 0 },
+                      true
+                    );
+                  }
+                  break;
+                }
+              }
+            }
+          }
+
+          const shootEvent = JSON.stringify({
+            type: "player_shot",
+            shooterId: playerId,
+          });
+          wss.clients.forEach((client) => {
+            if (client.readyState === WebSocket.OPEN) {
+              client.send(shootEvent);
+            }
+          });
+        } else if (data.type === "switch_weapon") {
+          const requestedWeapon = data.weapon;
+          if (player.inventory.includes(requestedWeapon)) {
+            player.currentWeapon = requestedWeapon;
+            console.log(
+              `Игрок ${playerId} сменил оружие на ${requestedWeapon}`
+            );
+          }
+        } else {
+          player.input = { ...player.input, ...data };
         }
-      });
+      } catch (e) {}
+    });
 
     ws.on("close", () => {
       console.log(`Игрок ${playerId} отключился.`);
@@ -132,6 +201,8 @@ async function main() {
       id: p.id,
       position: p.rigidBody.translation(),
       rotation: p.rigidBody.rotation(),
+      hp: p.hp,
+      currentWeapon: p.currentWeapon,
     }));
 
     if (gameState.length > 0) {
@@ -148,57 +219,8 @@ async function main() {
   }, 1000 / 60);
 }
 
-/**
- * Обновляет движение игрока на основе его ввода.
- */
-function updatePlayerMovement(
-  player: Player,
-  RAPIER: any,
-  world: RAPIER.World
-) {
-  const speed = player.input.run ? 250.0 : 150.0;
-  const input = player.input;
-  const linVel = player.rigidBody.linvel();
-
-  
-
-  // 1. Получаем готовый вектор движения от клиента (если он есть)
-  const moveVector = input.moveVector || { x: 0, z: 0 };
-
-  // 2. Проверяем, есть ли движение
-  if (moveVector.x === 0 && moveVector.z === 0) {
-    player.rigidBody.setLinvel({ x: 0, y: linVel.y, z: 0 }, true);
-  } else {
-    // 3. Создаем вектор Rapier. Клиент уже прислал нормализованный вектор.
-    const moveDirection = new RAPIER.Vector3(moveVector.x, 0, moveVector.z);
-
-    // 4. Устанавливаем скорость. Поворачивать ничего не нужно!
-    player.rigidBody.setLinvel(
-      {
-        x: moveDirection.x * speed,
-        y: linVel.y,
-        z: moveDirection.z * speed,
-      },
-      true
-    );
-  }
 
 
-  // 5. Логика прыжка
-  if (input.jump) {
-    const ray = new RAPIER.Ray(player.rigidBody.translation(), {
-      x: 0,
-      y: -1,
-      z: 0,
-    });
-    const hit = world.castRay(ray, 1.8, true);
-
-    if (hit !== null) {
-      player.rigidBody.applyImpulse({ x: 0, y: 75000, z: 0 }, true);
-    }
-    player.input.jump = false;
-  }
-}
 // Запускаем сервер
 main().catch((error) => {
   console.error("Произошла критическая ошибка при запуске сервера:", error);

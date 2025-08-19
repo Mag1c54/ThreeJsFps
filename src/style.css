@@ -15,3 +15,19 @@
   line-height: 24px;
   cursor: pointer;
 }
+
+#hud-container {
+  position: absolute; 
+  bottom: 20px;
+  right: 20px;
+  pointer-events: none; 
+  user-select: none;
+}
+
+#hp-display {
+  color: white;
+  font-family: Arial, sans-serif;
+  font-size: 24px;
+  font-weight: bold;
+  text-shadow: 2px 2px 4px #000000;
+}

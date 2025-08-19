@@ -1,6 +1,4 @@
 
-
-
 export let myPlayerId: string | null = null;
 
 

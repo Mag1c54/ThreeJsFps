@@ -21,5 +21,13 @@
     "noFallthroughCasesInSwitch": true,
     "noUncheckedSideEffectImports": true
   },
-  "include": ["src", "src/main.ts", "setup/network.ts"]
+  "include": [
+    "src",
+    "src/main.ts",
+    "setup/network.ts",
+    "server/src/utils/vector.ts",
+    "server/src/utils/hud.ts",
+    "server/src/weapon",
+    "server/src/utils/particles.ts"
+  ]
 }

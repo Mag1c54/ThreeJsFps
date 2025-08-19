@@ -15,12 +15,17 @@ export class FirstPersonControls {
   private moveBackward = false;
   private moveLeft = false;
   private moveRight = false;
+  
+  private socket: WebSocket; 
 
   constructor(
     camera: THREE.Camera,
-    MouseMoveSensitivity = 0.002
+    socket: WebSocket, 
+    MouseMoveSensitivity = 0.002 
   ) {
     this.MouseMoveSensitivity = MouseMoveSensitivity;
+    this.socket = socket; 
+    
     camera.rotation.set(0, 0, 0);
     this.pitchObject.add(camera);
     this.yawObject.add(this.pitchObject);
@@ -47,10 +52,8 @@ export class FirstPersonControls {
     return this.yawObject;
   }
 
-  /**
-   * Собирает состояние ввода для отправки на сервер.
-   */
   public getInputState() {
+
     const direction = new THREE.Vector3(
       Number(this.moveRight) - Number(this.moveLeft),
       0,
@@ -62,7 +65,6 @@ export class FirstPersonControls {
     if (direction.lengthSq() > 0) {
       direction.normalize();
   
-    
       const yaw = this.yawObject.rotation.y;
       const matrix = new THREE.Matrix4().makeRotationY(yaw);
       direction.applyMatrix4(matrix);
@@ -89,8 +91,9 @@ export class FirstPersonControls {
     return inputPayload;
   }
   
-
   private onMouseMove = (event: MouseEvent): void => {
+
+
     if (!this.enabled) return;
     const movementX = event.movementX || 0;
     const movementY = event.movementY || 0;
@@ -126,10 +129,22 @@ export class FirstPersonControls {
       case 'ShiftRight':
         this.run = true;
         break;
+      case 'Digit1':
+          if (this.socket && this.socket.readyState === WebSocket.OPEN) {
+            this.socket.send(JSON.stringify({ type: 'switch_weapon', weapon: 'thompson' }));
+          }
+        break;
+      case 'Digit2':
+           if (this.socket && this.socket.readyState === WebSocket.OPEN) {
+            this.socket.send(JSON.stringify({ type: 'switch_weapon', weapon: 'knife' }));
+          }
+        break;
     }
   };
 
   private onKeyUp = (event: KeyboardEvent): void => {
+
+
     if (!this.enabled) return;
     switch (event.code) {
       case 'KeyW':
@@ -156,74 +171,14 @@ export class FirstPersonControls {
   };
 
   private onMouseDown = (): void => {
+
     if (!this.enabled) return;
     this.click = true;
   };
 
   private onMouseUp = (): void => {
+   
     if (!this.enabled) return;
     this.click = false;
   };
 }
-
-
-
-// Locking The Camera
-
-// Moving forwards ('w' key is being pressed):
-
-// XcameraPosition = XcameraPosition - sin(YcameraRotation) - VmouseVelocity
-
-// ZcameraPosition = ZcameraPosition - (-cos(YcameraRotation)) - VmouseVelocity
-
-// Moving backwards ('s' key is being pressed):
-
-// XcameraPosition = XcameraPosition + sin(YcameraRotation) - VmouseVelocity
-
-// ZcameraPosition = ZcameraPosition - (-cos(YcameraRotation)) - VmouseVelocity
-
-// Strafing left ('a' key is being pressed):
-
-// XcameraPosition = XcameraPosition + sin(YcameraRotation + π / 2) - VmouseVelocity
-
-// ZcameraPosition = ZcameraPosition - (-cos(YcameraRotation + π / 2)) - VmouseVelocity
-
-// Strafing right ('d' key is being pressed):
-
-// XcameraPosition = XcameraPosition + sin(YcameraRotation - π / 2) - VmouseVelocity
-
-// ZcameraPosition = ZcameraPosition - (-cos(YcameraRotation - π / 2)) - VmouseVelocity
-
-// Turning camera right ('right arrow ->' key is being pressed):
-
-// YcameraRotation = YcameraRotation + VmouseVelocity
-
-// Turning camera left ('left arrow <-' key is being pressed):
-
-// YcameraRotation = YcameraRotation - VmouseVelocity
-
-// First Person Model Tracking
-
-// Positioning:
-
-// XcameraPosition = XcameraPosition - sin(YcameraRotation + π / 6) * C
-
-// YcameraPosition = YcameraPosition - C + sin(XcameraPosition + ZcameraPosition) * C
-
-// ZcameraPosition = ZcameraPosition - cos(YcameraRotation + π / 6) * C
-
-// Rotation:
-
-// XcameraRotation = XcameraRotation
-
-// YcameraRotation = YcameraRotation - π (ensures that the model faces the right way.)
-
-// ZcameraRotation = ZcameraRotation
-
-// Projectile Calculations
-
-// VprojectileVelocityX = sin(YcameraRotation)
-
-// VprojectileVelocityY = 0
-
-// VprojectileVelocityZ = cos(YcameraRotation)
