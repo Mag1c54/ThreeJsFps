@@ -1,0 +1,10 @@
+{
+  "extends": "../tsconfig.json",
+  "compilerOptions": {
+    "ignoreDeprecations": "6.0",
+    "baseUrl": "../",
+    "lib": ["DOM", "ES2020"],
+    "types": ["vite/client"]
+  },
+  "include": ["src", "../shared"]
+}
