@@ -1,4 +1,5 @@
 import { WebSocketServer, WebSocket } from "ws";
+<<<<<<< HEAD
 import { normalizeVector3 } from "./utils/vector";
 import type { Player } from "./serverTypes/player";
 import { createSeededRandom } from "@shared/utils/seed";
@@ -11,6 +12,22 @@ async function main() {
 
   console.log("Движок Rapier3D успешно инициализирован.");
 
+=======
+import * as RAPIER from "@dimforge/rapier3d-compat";
+import { normalizeVector3 } from "./utils/vector";
+import type { Player } from "./serverTypes/player";
+import { createSeededRandom } from "./utils/seed";
+import { updatePlayerMovement } from "./dependencies/server/playerMovement";
+
+async function main() {
+  await RAPIER.init();
+  console.log("Движок Rapier3D успешно инициализирован.");
+
+  const gravity = new RAPIER.Vector3(0, -9.81 * 2, 0);
+  const world = new RAPIER.World(gravity);
+
+
+>>>>>>> 41ec7bc36048c123436d8ca35fba12238008560a
   const floorSize = 4000;
   const floorBodyDesc = RAPIER.RigidBodyDesc.fixed();
   world.createCollider(
@@ -52,8 +69,12 @@ async function main() {
     const playerBodyDesc = RAPIER.RigidBodyDesc.dynamic()
       .setTranslation(0, playerHeight, 0)
       .setCanSleep(false)
+<<<<<<< HEAD
       .setLinearDamping(0.5)
       .lockRotations();
+=======
+      .setLinearDamping(0.5);
+>>>>>>> 41ec7bc36048c123436d8ca35fba12238008560a
     const playerRigidBody = world.createRigidBody(playerBodyDesc);
     world.createCollider(
       RAPIER.ColliderDesc.capsule(playerHeight / 2, playerRadius),
@@ -92,7 +113,11 @@ async function main() {
           if (!shooter) return;
 
           if (shooter.currentWeapon !== "thompson") {
+<<<<<<< HEAD
             return;
+=======
+            return 
+>>>>>>> 41ec7bc36048c123436d8ca35fba12238008560a
           }
 
           const yaw = data.yaw;
@@ -218,6 +243,11 @@ async function main() {
   }, 1000 / 60);
 }
 
+<<<<<<< HEAD
+=======
+
+
+>>>>>>> 41ec7bc36048c123436d8ca35fba12238008560a
 // Запускаем сервер
 main().catch((error) => {
   console.error("Произошла критическая ошибка при запуске сервера:", error);
